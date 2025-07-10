@@ -39,6 +39,8 @@ os.makedirs("每品类售价销量关系图", exist_ok=True)
 df = pd.read_excel("每日品类加权成本.xlsx")
 print("每日品类加权成本.xlsx读取完成\n")
 
+df.info()
+
 # 定义拟合函数们
 def linear(x, a, b):
     return a * x + b
