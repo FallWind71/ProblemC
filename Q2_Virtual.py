@@ -73,9 +73,23 @@ for category in df['分类名称'].unique():
     y = y[mask]
 
     df_filtered = pd.DataFrame({'加权单位售价': x, '总销量': y})
-    df_grouped = df_filtered.groupby('加权单位售价', as_index=False).mean()
-    x = df_grouped['加权单位售价'].values
-    y = df_grouped['总销量'].values
+    # ✨ 将 x 按 0.2 间隔划分区间，计算每段的质心
+    bin_width = 0.5
+    x_bins = np.arange(x.min(), x.max() + bin_width, bin_width)
+    bin_indices = np.digitize(x, x_bins)
+
+    # 用 DataFrame 聚合每个 bin 的中心点
+    binned = pd.DataFrame({'售价': x, '销量': y, 'bin': bin_indices})
+    grouped = binned.groupby('bin').agg({
+        '售价': 'mean',
+        '销量': 'mean'
+    }).reset_index()
+
+    # 替换为质心数据
+    x = grouped['售价'].values
+    y = grouped['销量'].values
+    print(f"🎯 Binning后质心点数：{len(x)}\n")
+
     print(f"聚合后点数（售价唯一值数量）：{len(x)}")
     print(f"剔除离群点后数据量：{len(x)}")
     original_n = len(data)
@@ -118,7 +132,7 @@ for category in df['分类名称'].unique():
 
     # 绘图
     plt.figure(figsize=(10, 6))
-    sns.scatterplot(x=x, y=y, s=40, color='blue',alpha =0.1, label="原始数据")
+    sns.scatterplot(x=x, y=y, s=40, color='blue', label="原始数据")
 
     if best_func is not None:
         x_fit = np.linspace(x.min(), x.max(), 200)
@@ -130,7 +144,7 @@ for category in df['分类名称'].unique():
     plt.ylabel("总销量（千克）")
     plt.legend()
     plt.tight_layout()
-    plt.savefig(f"每品类售价销量关系图/{category}_售价_vs_销量_拟合图.png")
+    plt.savefig(f"每品类售价销量关系图/{category}_售价_vs_销量_拟合图-质心.png")
     plt.close()
 
-    print(f"✅ 图像保存完成：{category}_售价_vs_销量_拟合图.png\n")
+    print(f"✅ 图像保存完成：{category}_售价_vs_销量_拟合图-质心.png\n")
