@@ -84,7 +84,37 @@ print("月度 品类销售额_销量_成本.xlsx 输出完成\n")
 ##################
 # 统计：日
 ##################
-#分出以每年每季度每分类的组，对组内'销量(千克)', '销售额'，‘成本’分别求和，然后转化为表格列
-monthly_item = df.groupby(['年', '月', '日','分类名称'])[['销量(千克)', '销售额', '成本']].sum().reset_index()
-monthly_item.to_excel("品类销售额_销量_成本日度统计.xlsx", index=False)
-print("月度 品类销售额_销量_成本.xlsx 输出完成\n")
+# 新增列：单位成本 = 成本 / 销量
+df['单位成本'] = df['成本'] / df['销量(千克)']
+
+# 去除无效值（如销量为 0）
+df = df[df['销量(千克)'] > 0]
+
+# 计算每天每品类的总销量
+total_sales = df.groupby(['销售日期', '分类名称'])['销量(千克)'].transform('sum')
+
+# 每条记录销量在当天该分类中的占比（权重）
+df['销量占比'] = df['销量(千克)'] / total_sales
+
+# 加权单位成本 = 单品单位成本 × 当日销量占比
+df['加权单位成本'] = df['单位成本'] * df['销量占比']
+
+# 按天、品类聚合，加权单位成本求和 × 总销量 => 得到该品类每天总成本
+daily_category_cost = df.groupby(['销售日期', '分类名称']).apply(
+    lambda g: pd.Series({
+        '加权单位成本': g['加权单位成本'].sum(),
+        '总销量': g['销量(千克)'].sum(),
+        '总成本': g['加权单位成本'].sum() * g['销量(千克)'].sum()
+    }),
+    #修复警告
+    include_group=False
+).reset_index()
+
+# 拆分日期
+daily_category_cost['年'] = daily_category_cost['销售日期'].dt.year
+daily_category_cost['月'] = daily_category_cost['销售日期'].dt.month
+daily_category_cost['日'] = daily_category_cost['销售日期'].dt.day
+
+# 保存
+daily_category_cost.to_excel("每日品类加权成本.xlsx", index=False)
+print("每日品类加权成本.xlsx 输出完成\n")
