@@ -63,7 +63,15 @@ for category in df_Cost['分类名称'].unique():
     data = df_Cost[df_Cost['分类名称'] == category]
 
     plt.figure(figsize=(12, 6))
-    sns.scatterplot(data=data, x='销售日期', y='加权单位成本', s=20, color='blue')  # ⬅ 点小一点
+    sns.scatterplot(
+        data=data,
+        x='销售日期',
+        y='加权单位成本',
+        s=20,
+        color='blue',
+        alpha=0.6
+    )
+
 
     plt.title(f"{category} 每日加权单位成本散点图")
     plt.xlabel("销售日期")
