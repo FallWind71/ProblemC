@@ -130,7 +130,6 @@ for category in df['分类名称'].unique():
     plt.ylabel("总销量（千克）")
     plt.legend()
     plt.tight_layout()
-    plt.show()
     plt.savefig(f"每品类售价销量关系图/{category}_售价_vs_销量_拟合图.png")
     plt.close()
 
