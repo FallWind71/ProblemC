@@ -153,8 +153,15 @@ for category in df['分类名称'].unique():
 
     # 绘图
     plt.figure(figsize=(10, 6))
-    sns.scatterplot(x=x, y=y, s=40, color='blue', label="原始数据")
+    
+    # 原始数据点（透明显示，表达数据分布）
+    sns.scatterplot(x=data['加权单位售价'].values, y=data['总销量'].values,
+                    s=20, color='blue', alpha=0.1, label="原始数据点")
 
+    # 质心点（可见）
+    sns.scatterplot(x=x, y=y, s=40, color='blue', label="售价区间质心点")
+
+    # 拟合曲线（基于质心）
     if best_func is not None:
         x_fit = np.linspace(x.min(), x.max(), 200)
         y_fit = best_func(x_fit, *best_params)
@@ -169,3 +176,4 @@ for category in df['分类名称'].unique():
     plt.close()
 
     print(f"✅ 图像保存完成：{category}_售价_vs_销量_拟合图-质心.png\n")
+
