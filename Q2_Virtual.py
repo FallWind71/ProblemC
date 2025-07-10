@@ -21,15 +21,14 @@ def format_equation(name, params):
     elif name == "指数":
         a, b = params
         return f"y = {a:.4f}·e^({b:.4f}·x)"
+    elif name == "反比例":
+        a, b = params
+        return f"y = {a:.4f}/x + {b:.4f}"
     elif "多项式" in name:
         terms = [f"{p:.4f}·x^{i}" for i, p in reversed(list(enumerate(params)))]
         return "y = " + " + ".join(terms).replace("+ -", "- ")
     else:
         return "未知函数"
-
-
-# 打印公式
-
 
 # 设置中文和图表风格
 sns.set(style="whitegrid", font="WenQuanYi Zen Hei", font_scale=1.2)
@@ -38,8 +37,6 @@ os.makedirs("每品类售价销量关系图", exist_ok=True)
 # 读取数据
 df = pd.read_excel("每日品类加权成本.xlsx")
 print("每日品类加权成本.xlsx读取完成\n")
-
-df.info()
 
 # 定义拟合函数们
 def linear(x, a, b):
@@ -54,7 +51,10 @@ def power_func(x, a, b):
 def expo_func(x, a, b):
     return a * np.exp(b * x)
 
-    # 添加多项式拟合函数（如二次、三次、四次）
+def inverse_proportion(x, a, b):
+    return a / (x + 1e-5) + b  # 避免除以0
+
+# 添加多项式拟合函数
 def poly2(x, a, b, c):
     return a * x**2 + b * x + c
 
@@ -64,15 +64,13 @@ def poly3(x, a, b, c, d):
 def poly4(x, a, b, c, d, e):
     return a * x**4 + b * x**3 + c * x**2 + d * x + e
 
-
+# 添加反比例函数
 fit_funcs = {
     "线性": linear,
     "对数": log_func,
     "幂函数": power_func,
     "指数": expo_func,
-    "二次多项式": poly2,
-    "三次多项式": poly3,
-    "四次多项式": poly4,
+    "反比例": inverse_proportion,
 }
 
 # 遍历每个品类
@@ -80,7 +78,8 @@ for category in df['分类名称'].unique():
     data = df[df['分类名称'] == category].copy()
     x = data['加权单位售价'].values
     y = data['总销量'].values
-        # 去除离群值（基于 IQR 方法）
+    
+    # 去除离群值（基于 IQR 方法）
     q1_y, q3_y = np.percentile(y, [25, 75])
     iqr_y = q3_y - q1_y
     lower_y = q1_y - 1.5 * iqr_y
@@ -95,8 +94,7 @@ for category in df['分类名称'].unique():
     x = x[mask]
     y = y[mask]
 
-    df_filtered = pd.DataFrame({'加权单位售价': x, '总销量': y})
-    # ✨ 将 x 按 0.2 间隔划分区间，计算每段的质心
+    # 将 x 按 0.5 间隔划分区间，计算每段的质心
     bin_width = 0.5
     x_bins = np.arange(x.min(), x.max() + bin_width, bin_width)
     bin_indices = np.digitize(x, x_bins)
@@ -111,20 +109,10 @@ for category in df['分类名称'].unique():
     # 替换为质心数据
     x = grouped['售价'].values
     y = grouped['销量'].values
-    print(f"🎯 Binning后质心点数：{len(x)}\n")
-
-    print(f"聚合后点数（售价唯一值数量）：{len(x)}")
-    print(f"剔除离群点后数据量：{len(x)}")
-    original_n = len(data)
-    filtered_n = len(x)
-    print(f"📉 离群点剔除：原始 {original_n} 条，剩余 {filtered_n} 条（{(filtered_n/original_n)*100:.1f}%）")
-
-
-
-
+    
     # 输出基本统计数据
     corr, _ = pearsonr(x, y)
-    print(f"👉 分类：{category}")
+    print(f"\n👉 分类：{category}")
     print(f"皮尔逊相关系数：{corr:.4f}")
     print(f"x（售价）范围：{x.min():.2f} ~ {x.max():.2f}")
     print(f"y（销量）范围：{y.min():.2f} ~ {y.max():.2f}")
@@ -146,22 +134,22 @@ for category in df['分类名称'].unique():
                 best_func = func
                 best_name = name
                 best_params = params
-        except:
-            print(f"  {name}拟合失败")
-        if best_func is not None:
-            equation = format_equation(best_name, best_params)
-            print(f"📐 最佳拟合公式（{best_name}）：{equation}\n")
-
+        except Exception as e:
+            print(f"  {name}拟合失败: {str(e)}")
+    
+    if best_func is not None:
+        equation = format_equation(best_name, best_params)
+        print(f"📐 最佳拟合公式（{best_name}）：{equation}")
 
     # 绘图
     plt.figure(figsize=(10, 6))
     
     # 原始数据点（透明显示，表达数据分布）
-    sns.scatterplot(x=data['加权单位售价'].values, y=data['总销量'].values,
-                    s=20, color='blue', alpha=0.1, label="原始数据点")
+    plt.scatter(data['加权单位售价'].values, data['总销量'].values,
+               s=20, color='blue', alpha=0.1, label="原始数据点")
 
     # 质心点（可见）
-    sns.scatterplot(x=x, y=y, s=40, color='blue', label="售价区间质心点")
+    plt.scatter(x, y, s=40, color='blue', label="售价区间质心点")
 
     # 拟合曲线（基于质心）
     if best_func is not None:
@@ -177,5 +165,4 @@ for category in df['分类名称'].unique():
     plt.savefig(f"每品类售价销量关系图/{category}_售价_vs_销量_拟合图-质心.png")
     plt.close()
 
-    print(f"✅ 图像保存完成：{category}_售价_vs_销量_拟合图-质心.png\n")
-
+    print(f"✅ 图像保存完成：{category}_售价_vs_销量_拟合图-质心.png")
