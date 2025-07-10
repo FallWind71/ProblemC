@@ -9,17 +9,24 @@ from scipy.optimize import curve_fit
 
 # 生成拟合函数公式字符串
 def format_equation(name, params):
-    a, b = params
     if name == "线性":
+        a, b = params
         return f"y = {a:.4f}·x + {b:.4f}"
     elif name == "对数":
+        a, b = params
         return f"y = {a:.4f}·ln(x) + {b:.4f}"
     elif name == "幂函数":
+        a, b = params
         return f"y = {a:.4f}·x^{b:.4f}"
     elif name == "指数":
+        a, b = params
         return f"y = {a:.4f}·e^({b:.4f}·x)"
+    elif "多项式" in name:
+        terms = [f"{p:.4f}·x^{i}" for i, p in reversed(list(enumerate(params)))]
+        return "y = " + " + ".join(terms).replace("+ -", "- ")
     else:
         return "未知函数"
+
 
 # 打印公式
 
@@ -45,11 +52,25 @@ def power_func(x, a, b):
 def expo_func(x, a, b):
     return a * np.exp(b * x)
 
+    # 添加多项式拟合函数（如二次、三次、四次）
+def poly2(x, a, b, c):
+    return a * x**2 + b * x + c
+
+def poly3(x, a, b, c, d):
+    return a * x**3 + b * x**2 + c * x + d
+
+def poly4(x, a, b, c, d, e):
+    return a * x**4 + b * x**3 + c * x**2 + d * x + e
+
+
 fit_funcs = {
     "线性": linear,
     "对数": log_func,
     "幂函数": power_func,
     "指数": expo_func,
+    "二次多项式": poly2,
+    "三次多项式": poly3,
+    "四次多项式": poly4,
 }
 
 # 遍历每个品类
